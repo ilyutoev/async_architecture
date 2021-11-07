@@ -1,6 +1,8 @@
+import json
 import uuid
 import random
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.shortcuts import render
@@ -8,9 +10,16 @@ from django.urls import reverse_lazy
 
 from authn.models import Account
 from authn.models import Role
+from kafka import KafkaProducer
 from tracker.models import Task
 from tracker.models import Status
 from tracker.forms import TaskForm
+
+
+producer = KafkaProducer(
+    bootstrap_servers=settings.KAFKA_URL,
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+)
 
 
 @login_required(login_url=reverse_lazy('login'))
@@ -44,8 +53,29 @@ def add_task(request):
                 description=form.cleaned_data['description'],
                 account=random.choice(accounts)
             )
-            # TaskCreated CUD event
-            # TaskAssigned BE
+            event = {
+                'event_name': 'TaskCreated',
+                'data': {
+                    'public_id': task.public_id,
+                    'description': task.description,
+                }
+            }
+            producer.send(
+                topic=settings.TASKS_STREAM_TOPIC,
+                value=event
+            )
+
+            event = {
+                'event_name': 'TaskAssigned',
+                'data': {
+                    'public_id': task.public_id,
+                    'account_public_id': task.account.public_id
+                }
+            }
+            producer.send(
+                topic=settings.TASKS_TOPIC,
+                value=event
+            )
             return redirect('/')
         else:
             return render(request, 'add_task.html', {'form': form})
@@ -56,7 +86,17 @@ def done_task(request, pk):
     task = Task.objects.get(pk=pk)
     task.status = Status.DONE
     task.save()
-    # TaskCompleted BE
+
+    event = {
+        'event_name': 'TaskCompleted',
+        'data': {
+            'public_id': task.public_id,
+        }
+    }
+    producer.send(
+        topic=settings.TASKS_TOPIC,
+        value=event
+    )
     return redirect('/')
 
 
@@ -68,6 +108,16 @@ def assign_tasks(request):
     for task in tasks:
         task.account = random.choice(accounts)
         task.save()
-        # BE Taskassigned
+        event = {
+            'event_name': 'TaskAssigned',
+            'data': {
+                'public_id': task.public_id,
+                'account_public_id': task.account.public_id
+            }
+        }
+        producer.send(
+            topic=settings.TASKS_TOPIC,
+            value=event
+        )
 
     return redirect('/')

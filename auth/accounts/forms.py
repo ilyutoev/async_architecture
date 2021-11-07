@@ -1,13 +1,13 @@
 import json
 import uuid
 
-from accounts.models import Account
 from django.conf import settings
 from django.contrib.auth.forms import UserChangeForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.forms import UsernameField
 from kafka import KafkaProducer
 
+from accounts.models import Account
 
 producer = KafkaProducer(
     bootstrap_servers=settings.KAFKA_URL,
