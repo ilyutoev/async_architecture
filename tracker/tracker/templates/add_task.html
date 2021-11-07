@@ -1,0 +1,11 @@
+<h1>Add new task</h1>
+
+{% if is_available_accounts %}
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Add</button>
+  </form>
+{% else %}
+  <p>There are no worker accounts.</p>
+{% endif %}

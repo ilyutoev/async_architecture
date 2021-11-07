@@ -1,0 +1,23 @@
+<p><a href="{% url 'logout' %}">Log out</a></p>
+<table>
+    <tr>
+        <td>ID</td>
+        <td>Public ID</td>
+        <td>Username</td>
+        <td>Role</td>
+        <td>Active</td>
+        <td>Edit</td>
+        <td>Delete</td>
+    </tr>
+    {% for account in object_list %}
+        <tr>
+            <td>{{ account.id }}</td>
+            <td>{{ account.public_id }}</td>
+            <td>{{ account.email }}></td>
+            <td>{{account.role }}</td>
+            <td>{{ account.is_active }}</td>
+            <td><a href="{% url 'edit' account.id %}">Edit</a></td>
+            <td><a href="{% url 'delete' account.id %}">Delete</a></td>
+        </tr>
+    {% endfor %}
+</table>

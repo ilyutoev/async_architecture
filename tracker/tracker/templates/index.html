@@ -1,0 +1,54 @@
+<h1>All tasks</h1>
+
+{% if can_add_task %}
+    <p><a href="{% url 'add_task' %}">Add new task</a></p>
+    <p><a href="{% url 'assign_tasks' %}">Assign tasks</a></p>
+{% endif %}
+
+{% if tasks %}
+    <table>
+        <tr>
+            <td>#</td>
+            <td>Public ID</td>
+            <td>Description</td>
+            <td>Status</td>
+            <td>Account</td>
+        </tr>
+        {% for task in tasks %}
+            <tr>
+                <td>{{ task.id }}</td>
+                <td>{{ task.public_id }}</td>
+                <td>{{ task.description }}</td>
+                <td>{{ task.status }}</td>
+                <td>{{ task.account.email }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endif %}
+
+<br>
+
+{% if my_tasks %}
+    <h1>My tasks</h1>
+
+    <table>
+        <tr>
+            <td>#</td>
+            <td>Public ID</td>
+            <td>Description</td>
+            <td>Status</td>
+            <td>Account</td>
+            <td>Meta</td>
+        </tr>
+        {% for task in my_tasks %}
+            <tr>
+                <td>{{ task.id }}</td>
+                <td>{{ task.public_id }}</td>
+                <td>{{ task.description }}</td>
+                <td>{{ task.status }}</td>
+                <td>{{ task.account.email }}</td>
+                <td>{% if task.status != 'done' %}<a href="{% url 'done_task' task.id %}">Done</a>{% endif %}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endif %}
