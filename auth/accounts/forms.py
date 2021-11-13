@@ -1,13 +1,15 @@
 import json
 import uuid
 
+from accounts.models import Account
 from django.conf import settings
 from django.contrib.auth.forms import UserChangeForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.forms import UsernameField
+from jsonschema import validate
 from kafka import KafkaProducer
 
-from accounts.models import Account
+from events_schema import schema
 
 producer = KafkaProducer(
     bootstrap_servers=settings.KAFKA_URL,
@@ -39,12 +41,14 @@ class AccountChangeForm(UserChangeForm):
     def clean(self):
         event = {
             'event_name': 'AccountUpdated',
+            'version': 'v1',
             'data': {
                 'public_id': str(self.instance.public_id),
                 'email': self.cleaned_data['email'],
                 'first_name': self.cleaned_data['first_name'],
             }
         }
+        validate(event, schema[event['version']][event['event_name']])
         producer.send(
             topic=settings.ACCOUNTS_STREAM_TOPIC,
             value=event
@@ -53,12 +57,13 @@ class AccountChangeForm(UserChangeForm):
         if self.instance.role != self.cleaned_data['role']:
             event = {
                 'event_name': 'AccountRoleChanged',
+                'version': 'v1',
                 'data': {
                     'public_id': str(self.instance.public_id),
                     'role': self.cleaned_data['role'],
                 }
             }
-
+            validate(event, schema[event['version']][event['event_name']])
             producer.send(
                 topic=settings.ACCOUNTS_TOPIC,
                 value=event
