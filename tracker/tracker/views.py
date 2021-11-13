@@ -10,11 +10,13 @@ from django.urls import reverse_lazy
 
 from authn.models import Account
 from authn.models import Role
+from jsonschema import validate
 from kafka import KafkaProducer
 from tracker.models import Task
 from tracker.models import Status
 from tracker.forms import TaskForm
 
+from events_schema import schema
 
 producer = KafkaProducer(
     bootstrap_servers=settings.KAFKA_URL,
@@ -34,14 +36,11 @@ def index(request):
 
 @login_required(login_url=reverse_lazy('login'))
 def add_task(request):
+    context = {}
+    context['is_available_accounts'] = Account.objects.filter(role=Role.WORKER, is_active=True).exists()
     if request.method == 'GET':
-        is_available_accounts = Account.objects.filter(role=Role.WORKER, is_active=True)
-        context = {}
-        if is_available_accounts:
+        if context['is_available_accounts']:
             context['form'] = TaskForm()
-            context['is_available_accounts'] = True
-        else:
-            context['is_available_accounts'] = False
         return render(request, 'add_task.html', context)
 
     elif request.method == 'POST':
@@ -51,15 +50,19 @@ def add_task(request):
             task = Task.objects.create(
                 public_id=uuid.uuid4(),
                 description=form.cleaned_data['description'],
+                jira_id=form.cleaned_data['jira_id'],
                 account=random.choice(accounts)
             )
             event = {
                 'event_name': 'TaskCreated',
+                'version': 'v1',
                 'data': {
                     'public_id': task.public_id,
                     'description': task.description,
+                    'jira_id': task.jira_id,
                 }
             }
+            validate(event, schema[event['version']][event['event_name']])
             producer.send(
                 topic=settings.TASKS_STREAM_TOPIC,
                 value=event
@@ -67,18 +70,21 @@ def add_task(request):
 
             event = {
                 'event_name': 'TaskAssigned',
+                'version': 'v1',
                 'data': {
                     'public_id': task.public_id,
                     'account_public_id': task.account.public_id
                 }
             }
+            validate(event, schema[event['version']][event['event_name']])
             producer.send(
                 topic=settings.TASKS_TOPIC,
                 value=event
             )
             return redirect('/')
         else:
-            return render(request, 'add_task.html', {'form': form})
+            context['form'] = form
+            return render(request, 'add_task.html', context)
 
 
 @login_required(login_url=reverse_lazy('login'))
@@ -89,10 +95,12 @@ def done_task(request, pk):
 
     event = {
         'event_name': 'TaskCompleted',
+        'version': 'v1',
         'data': {
             'public_id': task.public_id,
         }
     }
+    validate(event, schema[event['version']][event['event_name']])
     producer.send(
         topic=settings.TASKS_TOPIC,
         value=event
@@ -110,11 +118,13 @@ def assign_tasks(request):
         task.save()
         event = {
             'event_name': 'TaskAssigned',
+            'version': 'v1',
             'data': {
                 'public_id': task.public_id,
                 'account_public_id': task.account.public_id
             }
         }
+        validate(event, schema[event['version']][event['event_name']])
         producer.send(
             topic=settings.TASKS_TOPIC,
             value=event
