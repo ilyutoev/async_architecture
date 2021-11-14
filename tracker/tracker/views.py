@@ -57,7 +57,7 @@ def add_task(request):
                 'event_name': 'TaskCreated',
                 'version': 'v1',
                 'data': {
-                    'public_id': task.public_id,
+                    'public_id': str(task.public_id),
                     'description': task.description,
                     'jira_id': task.jira_id,
                 }
@@ -72,8 +72,10 @@ def add_task(request):
                 'event_name': 'TaskAssigned',
                 'version': 'v1',
                 'data': {
-                    'public_id': task.public_id,
-                    'account_public_id': task.account.public_id
+                    'public_id': str(task.public_id),
+                    'description': task.description,
+                    'jira_id': task.jira_id,
+                    'account_public_id': str(task.account.public_id)
                 }
             }
             validate(event, schema[event['version']][event['event_name']])
@@ -97,7 +99,7 @@ def done_task(request, pk):
         'event_name': 'TaskCompleted',
         'version': 'v1',
         'data': {
-            'public_id': task.public_id,
+            'public_id': str(task.public_id),
         }
     }
     validate(event, schema[event['version']][event['event_name']])
@@ -120,8 +122,10 @@ def assign_tasks(request):
             'event_name': 'TaskAssigned',
             'version': 'v1',
             'data': {
-                'public_id': task.public_id,
-                'account_public_id': task.account.public_id
+                'public_id': str(task.public_id),
+                'description': task.description,
+                'jira_id': task.jira_id,
+                'account_public_id': str(task.account.public_id)
             }
         }
         validate(event, schema[event['version']][event['event_name']])

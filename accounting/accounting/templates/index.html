@@ -1,0 +1,51 @@
+<h1>Accounting service</h1>
+
+{% if is_admin %}
+<h2>Total cost today: {{ total_today_cost }}</h2>
+
+<h2>Statistic by day</h2>
+
+<table>
+    <tr>
+        <td>Date</td>
+        <td>Debit</td>
+        <td>Credit</td>
+    </tr>
+    {% for stat in statistic %}
+        <tr>
+            <td>{{ stat.date|date:"Y-m-d" }}</td>
+            <td>{{ stat.debit }}</td>
+            <td>{{ stat.credit}}</td>
+        </tr>
+    {% endfor %}
+</table>
+
+{% else %}
+<h2>Balance: {{ balance }}</h2>
+
+<table>
+    <tr>
+        <td>Date</td>
+        <td>Debit</td>
+        <td>Credit</td>
+        <td>Status</td>
+        <td>Description</td>
+    </tr>
+    {% for log in audit_log %}
+        <tr>
+            <td>{{ log.created_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ log.debit }}</td>
+            <td>{{ log.credit}}</td>
+            <td>{{ log.status }}</td>
+            <td>{% if log.task %}
+                    {{ log.task.jira_id }} - {{ log.task.description }}
+                {% else %}
+                {% endif %}
+
+            </td>
+        </tr>
+    {% endfor %}
+</table>
+
+
+{% endif %}

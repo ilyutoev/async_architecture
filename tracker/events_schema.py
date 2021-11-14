@@ -106,6 +106,20 @@ schema = {
           }
         }
       }
+    },
+
+    "SchedulerDayOff": {
+      "type": "object",
+      "properties": {
+        "version": {"type": "string"},
+        "event_name": {"type": "string"},
+        "data": {
+          "type":  "object",
+          "properties": {
+            "now": {"type":  "string"}
+          }
+        }
+      }
     }
 
   }
