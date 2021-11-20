@@ -18,6 +18,8 @@ class Account(AbstractUser):
 
     username = None
     email = models.EmailField('Email address', unique=True)
+
+    balance = models.IntegerField(default=0)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
     objects = CustomUserManager()

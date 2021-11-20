@@ -8,4 +8,5 @@
 ### Run kafka consumer
 ```shell
     ./manage.py kafka_consumer
+
 ```

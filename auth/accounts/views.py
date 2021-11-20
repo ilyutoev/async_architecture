@@ -1,5 +1,8 @@
 import json
 
+from accounts.forms import AccountChangeForm
+from accounts.forms import AccountCreationForm
+from accounts.models import Account
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
@@ -7,15 +10,13 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.views import generic
-from kafka import KafkaProducer
-
-from accounts.forms import AccountCreationForm, AccountChangeForm
 from django.views.generic import DetailView
 from django.views.generic import ListView
-
-from accounts.models import Account
+from jsonschema import validate
+from kafka import KafkaProducer
 from oauth2_provider.views import ProtectedResourceView
 
+from events_schema import schema
 
 producer = KafkaProducer(
     bootstrap_servers=settings.KAFKA_URL,
@@ -32,6 +33,7 @@ class SignUpView(generic.CreateView):
         self.object = form.save()
         event = {
             'event_name': 'AccountCreated',
+            'version': 'v1',
             'data': {
                 'public_id': self.object.public_id,
                 'email': self.object.email,
@@ -39,6 +41,7 @@ class SignUpView(generic.CreateView):
                 'first_name': self.object.first_name,
             }
         }
+        validate(event, schema[event['version']][event['event_name']])
         producer.send(
             topic=settings.ACCOUNTS_STREAM_TOPIC,
             value=event
@@ -71,8 +74,10 @@ class AccountDelete(DetailView):
 
         event = {
             'event_name': 'AccountDeleted',
+            'version': 'v1',
             'data': {'public_id': str(object.public_id)}
         }
+        validate(event, schema[event['version']][event['event_name']])
         producer.send(
             topic=settings.ACCOUNTS_STREAM_TOPIC,
             value=event

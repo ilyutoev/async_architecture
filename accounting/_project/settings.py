@@ -40,6 +40,7 @@ INSTALLED_APPS = [
 
     'authn',
     'accounting',
+    'analytics',
 ]
 
 MIDDLEWARE = [
@@ -127,6 +128,11 @@ STATIC_URL = '/static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+AUTH_URL = 'http://127.0.0.1:8001/o/authorize/'
+CLIENT_ID = 'TniAR03vOBEbudw3YYrFWxFcCeniXLoQchGFDS2z'
+CLIENT_SECRET = 'I2e1sH9QMJ3v8o9BbS6QOPQmJuRZnXVMPhcbA9Zqd3hg62cGqkd5lolHuFan6jilIwVKIWJaO8ccJnNuuOeiMeMmtTlZ5l95FerkvpTw45DfcH0QOfyHXE2vbqbbxZni'
+
+
 AUTH_USER_MODEL = 'authn.Account'
 LOGIN_REDIRECT_URL = '/'
 
@@ -135,3 +141,4 @@ ACCOUNTS_STREAM_TOPIC = 'accounts-stream'
 ACCOUNTS_TOPIC = 'accounts'
 TASKS_STREAM_TOPIC = 'tasks-stream'
 TASKS_TOPIC = 'tasks'
+SCHEDULER_TOPIC = 'scheduler-stream'
