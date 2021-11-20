@@ -5,11 +5,11 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Max
 from django.db.models import Sum
 from django.shortcuts import render
+from django.urls import reverse_lazy
 
 from authn.models import Role
 from authn.models import Account
-from accounting.models import AuditLog
-from django.urls import reverse_lazy
+from analitycs.models import AuditLog
 
 
 @login_required(login_url=reverse_lazy('login'))

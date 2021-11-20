@@ -5,6 +5,7 @@ import random
 from django.conf import settings
 from django.db import transaction
 from kafka import KafkaConsumer
+from kafka import KafkaProducer
 from django.core.management.base import BaseCommand
 
 from authn.models import Account
@@ -13,6 +14,12 @@ from accounting.models import Task
 from accounting.models import AuditLog
 from accounting.models import Status
 from accounting.models import AuditLogStatus
+
+
+producer = KafkaProducer(
+    bootstrap_servers=settings.KAFKA_URL,
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+)
 
 
 class Command(BaseCommand):
@@ -121,13 +128,30 @@ class Command(BaseCommand):
                         account.balance -= task.price
                         account.save()
 
-                        AuditLog.objects.create(
+                        audit_log = AuditLog.objects.create(
                             public_id=uuid.uuid4(),
                             account=account,
                             debit=task.price,
                             credit=0,
                             task=task,
                             status=AuditLogStatus.TASK_ASSIGNED
+                        )
+
+                        event = {
+                            'event_name': 'AuditLogCreated',
+                            'version': 'v1',
+                            'data': {
+                                'public_id': str(audit_log.public_id),
+                                'account_public_id': str(audit_log.account.public_id),
+                                'debit': audit_log.debit,
+                                'credit': audit_log.credit,
+                                'task_public_id': str(audit_log.task.public_id),
+                                'status': audit_log.status,
+                            }
+                        }
+                        producer.send(
+                            topic=settings.AUDIT_LOG_STREAM_TOPIC,
+                            value=event
                         )
 
             if event_name == 'TaskCompleted':
@@ -143,7 +167,7 @@ class Command(BaseCommand):
                     task.status = Status.DONE
                     task.save()
 
-                    AuditLog.objects.create(
+                    audit_log = AuditLog.objects.create(
                         public_id=uuid.uuid4(),
                         account=task.account,
                         debit=0,
@@ -152,11 +176,28 @@ class Command(BaseCommand):
                         status=AuditLogStatus.TASK_COMPLETED
                     )
 
+                    event = {
+                        'event_name': 'AuditLogCreated',
+                        'version': 'v1',
+                        'data': {
+                            'public_id': str(audit_log.public_id),
+                            'account_public_id': str(audit_log.account.public_id),
+                            'debit': audit_log.debit,
+                            'credit': audit_log.credit,
+                            'task_public_id': str(audit_log.task.public_id),
+                            'status': audit_log.status,
+                        }
+                    }
+                    producer.send(
+                        topic=settings.AUDIT_LOG_STREAM_TOPIC,
+                        value=event
+                    )
+
             if event_name == 'SchedulerDayOff':
                 with transaction.atomic():
                     for worker in Account.objects.filter(role=Role.WORKER):
                         if worker.balance > 0:
-                            AuditLog.objects.create(
+                            audit_log = AuditLog.objects.create(
                                 public_id=uuid.uuid4(),
                                 account=worker,
                                 debit=worker.balance,
@@ -165,3 +206,20 @@ class Command(BaseCommand):
                             )
                             worker.balance = 0
                             worker.save()
+
+                            event = {
+                                'event_name': 'AuditLogCreated',
+                                'version': 'v1',
+                                'data': {
+                                    'public_id': str(audit_log.public_id),
+                                    'account_public_id': str(audit_log.account.public_id),
+                                    'debit': audit_log.debit,
+                                    'credit': audit_log.credit,
+                                    'task_public_id': None,
+                                    'status': audit_log.status,
+                                }
+                            }
+                            producer.send(
+                                topic=settings.AUDIT_LOG_STREAM_TOPIC,
+                                value=event
+                            )
